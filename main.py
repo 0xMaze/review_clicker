@@ -5,13 +5,15 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 import easygui
-import configparser
+from configparser import ConfigParser
 import logging
 
 
 class ReviewClicker:
     def __init__(self):
-        self.config = configparser.ConfigParser()
+        self.config = ConfigParser()
+        logging.info("Loading config")
+
         self.config.read("config.ini")
 
         self.url = self.config.get("NearCrowd", "url")
@@ -113,7 +115,7 @@ def main():
     review_clicker = ReviewClicker()
 
     review_clicker.load_page()
-    review_clicker.find_review()
+    # review_clicker.find_review()
 
 
 if __name__ == "__main__":
