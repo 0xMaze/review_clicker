@@ -115,7 +115,7 @@ def main():
     review_clicker = ReviewClicker()
 
     review_clicker.load_page()
-    # review_clicker.find_review()
+    review_clicker.find_review()
 
 
 if __name__ == "__main__":
