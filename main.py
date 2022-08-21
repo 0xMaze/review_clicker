@@ -1,121 +1,128 @@
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
-from selenium.common.exceptions import TimeoutException
-import easygui
-from configparser import ConfigParser
+import sys
 import logging
+from os import *
+from PyQt6 import QtWidgets
+from PyQt6.QtCore import Qt
+from ui import Ui_MainWindow
+from PyQt6.QtGui import QIcon
+from clicker import ReviewClicker
+from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
 
-class ReviewClicker:
+class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
-        self.config = ConfigParser()
-        logging.info("Loading config")
+        super(MainWindow, self).__init__()
+        self.ui = Ui_MainWindow()
+        self.ui.setupUi(self)
+        self.init_UI()
 
-        self.config.read("config.ini")
+    def init_UI(self):
+        logging.basicConfig(level=logging.INFO)
+        self.setFixedSize(self.size())
+        self.ui.lineEdit.setText("Default")
+        self.ui.label.setStyleSheet("color: red")
+        self.ui.pushButton.setIcon(QIcon(r"img\folder.png"))
+        self.ui.searchButton.clicked.connect(self.run_clicker)
+        self.ui.pushButton.clicked.connect(self.get_chrome_user_data)
+        self.ui.lineEdit.editingFinished.connect(self.set_chrome_profile)
+        self.chrome_user_data = self.check_default_path()
+        self.chrome_profile = "Default"
+        self.setWindowTitle("NearCrowd Review Clicker")
+        self.setWindowIcon(QIcon(r"img\nearcrowd.jpg"))
 
-        self.url = self.config.get("NearCrowd", "url")
-        self.sunshine_button_xpath = self.config.get(
-            "NearCrowd", "sunshine_button_xpath"
-        )
-        self.sunshine_review_button_xpath = self.config.get(
-            "NearCrowd", "sunshine_review_button_xpath"
-        )
-        self.sunshine_header_xpath = self.config.get(
-            "NearCrowd", "sunshine_header_xpath"
-        )
+    def set_chrome_profile(self):
+        self.chrome_profile = self.ui.lineEdit.text()
+        print(self.chrome_profile)
 
-        self.user_data_dir = self.config.get("ChromeProfile", "user_data_dir")
-        self.profile_directory = self.config.get("ChromeProfile", "profile_directory")
-
-        self.options = Options()
-        self.options.add_argument(f"--profile-directory={self.profile_directory}")
-        self.options.add_argument(f"user-data-dir={self.user_data_dir}")
-        self.options.add_argument("--headless")
-
-        self.driver = self.init_chrome()
-
-    def init_chrome(self):
-        logging.info("Starting Chrome")
-
-        driver = webdriver.Chrome(options=self.options)
-
-        return driver
-
-    def load_page(self):
-        logging.info("Opening page")
-
-        self.driver.get(self.url)
-
-        logging.info("Waiting for page to load")
-
-        WebDriverWait(self.driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, f"{self.sunshine_button_xpath}"))
-        )
-
-        logging.info("Found the taskset")
-
-        self.driver.find_element(By.XPATH, f"{self.sunshine_button_xpath}").click()
-
-        logging.info("Taskset opened")
-        logging.info("Waiting for page to load")
-
-    def click_review_button(self):
-        logging.info("Looking for review button")
-
-        review_button = WebDriverWait(self.driver, 10).until(
-            EC.element_to_be_clickable(
-                (By.XPATH, f"{self.sunshine_review_button_xpath}")
-            )
-        )
-
-        logging.info("Found review button")
-
-        if review_button:
-            self.driver.find_element(
-                By.XPATH, f"{self.sunshine_review_button_xpath} "
-            ).click()
-
-        logging.info("Review button clicked")
-
-    @staticmethod
-    def pop_up():
-        return easygui.msgbox("Review found", "Alert", ok_button="OK")
-
-    def find_review(self):
-        while WebDriverWait(self.driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, f"{self.sunshine_header_xpath}"))
+    def run_clicker(self):
+        if self.check_empty_fields() and self.check_chrome_profile(
+            self.ui.lineEdit.text()
         ):
+            clicker = ReviewClicker(self.chrome_user_data, self.chrome_profile)
+            clicker.load_page()
+            clicker.find_review()
 
-            self.click_review_button()
+    def check_default_path(self):
+        user = getlogin()
+        default_path = rf"C:\Users\{user}\AppData\Local\Google\Chrome\User Data"
 
-            try:
-                WebDriverWait(self.driver, 3).until(
-                    EC.alert_is_present(), "Timed out waiting for alert"
-                )
+        if path.exists(default_path):
+            self.ui.label.setText("Path found!")
+            self.ui.label.setStyleSheet("color: green")
+            self.ui.pushButton.setEnabled(False)
 
-                alert = self.driver.switch_to.alert
-                alert.accept()
+            return default_path
+        else:
+            self.show_not_found_path_dialog()
+            return self.get_chrome_user_data()
 
-                logging.info("Alert accepted")
-            except TimeoutException:
-                self.pop_up()
-                logging.info("Review found")
+    def check_chrome_profile(self, profile_name):
+        path = self.chrome_user_data
 
-                return
+        for f in scandir(path=path):
+            print(f"{f.name} - {profile_name}")
+            if f.is_dir() and f.name == profile_name:
+                return True
 
-        return
+        self.show_incorrect_profile_dialog()
+        return False
+
+    def check_empty_fields(self):
+        if self.ui.lineEdit.text() == "" or self.chrome_user_data == "":
+            self.show_empty_fields_dialog()
+            return False
+        else:
+            return True
+
+    def show_empty_fields_dialog(self):
+        msgBox = QMessageBox()
+        msgBox.setWindowIcon(QIcon(r"img\not_found.png"))
+        msgBox.setIcon(QMessageBox.Icon.Warning)
+        msgBox.setText("Not all fields are filled in!")
+        msgBox.setWindowTitle("Warning!")
+        msgBox.setStandardButtons(QMessageBox.StandardButton.Ok)
+
+        msgBox.exec()
+
+    def show_incorrect_profile_dialog(self):
+        msgBox = QMessageBox()
+        msgBox.setWindowIcon(QIcon(r"img\not_found.png"))
+        msgBox.setIcon(QMessageBox.Icon.Warning)
+        msgBox.setText("Invalid chrome profile!")
+        msgBox.setWindowTitle("Warning!")
+        msgBox.setStandardButtons(QMessageBox.StandardButton.Ok)
+
+        msgBox.exec()
+
+    def show_not_found_path_dialog(self):
+        msgBox = QMessageBox()
+        msgBox.setWindowIcon(QIcon(r"img\not_found.png"))
+        msgBox.setIcon(QMessageBox.Icon.Warning)
+        msgBox.setText("Chrome user data directory not found!")
+        msgBox.setWindowTitle("Warning!")
+        msgBox.setStandardButtons(QMessageBox.StandardButton.Ok)
+
+        msgBox.exec()
+
+    def get_chrome_user_data(self):
+        chrome_user_data = QFileDialog.getExistingDirectory(
+            self,
+            "Open chrome user data directory",
+            r"C:\Users\user\AppData\Local\Google\Chrome\User Data",
+        )
+
+        self.ui.label.setText("Path found!")
+        self.ui.label.setStyleSheet("color: green")
+
+        return chrome_user_data
 
 
 def main():
-    logging.basicConfig(level=logging.INFO)
+    app = QtWidgets.QApplication([])
+    application = MainWindow()
+    application.show()
 
-    review_clicker = ReviewClicker()
-
-    review_clicker.load_page()
-    review_clicker.find_review()
+    sys.exit(app.exec())
 
 
 if __name__ == "__main__":
