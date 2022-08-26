@@ -31,12 +31,17 @@ class ReviewClicker:
 
         self.options = Options()
 
-        self.options.add_argument(f"--profile-directory={self.profile_directory}")
-        self.options.add_argument(f"user-data-dir={self.user_data_dir}")
         self.options.add_argument("--disable-infobars")
         self.options.add_argument("--disable-gpu")
         self.options.add_argument("--no-sandbox")
-        # self.options.add_argument("--headless")
+        self.options.add_argument(f"--profile-directory={self.profile_directory}")
+        self.options.add_argument(f"user-data-dir={self.user_data_dir}")
+
+        if self.config.get("ChromeOptions", "detach") == "true":
+            self.options.add_experimental_option("detach", True)
+
+        if self.config.get("ChromeOptions", "headless") == "true":
+            self.options.add_argument("--headless")
 
         self.driver = webdriver.Chrome(
             executable_path=r"chromedriver.exe", options=self.options
@@ -96,7 +101,6 @@ class ReviewClicker:
                 logging.info("Alert accepted")
             except TimeoutException:
                 logging.info("Review found")
-
                 return
 
         return

@@ -2,9 +2,9 @@ import io
 import sys
 import logging
 from os import *
-from json import load, dump
+from json import load
+from playsound import playsound
 from PyQt6 import QtWidgets
-from PyQt6.QtCore import Qt
 from ui import Ui_MainWindow
 from PyQt6.QtGui import QIcon
 from clicker import ReviewClicker
@@ -47,6 +47,7 @@ class MainWindow(QtWidgets.QMainWindow):
             clicker = ReviewClicker(self.chrome_user_data, self.chrome_profile)
             clicker.load_page()
             clicker.find_review()
+            playsound("sound.mp3")
 
     def check_default_path(self):
         user = getlogin()
@@ -100,10 +101,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 real_profile_name = self.get_profile_name_from_file(
                     chrome_profile_name_path
                 )
-
-                # print(f"\n{initial_profile_name} :\n {real_profile_name}\n")
-
-                # print(chrome_profile_name_path)
 
                 profiles[f.name] = real_profile_name
                 self.ui.comboBox.addItem(real_profile_name)
