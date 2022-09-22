@@ -3,6 +3,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+import platform
 from selenium.common.exceptions import TimeoutException
 from configparser import ConfigParser
 import logging
@@ -43,9 +44,12 @@ class ReviewClicker:
         if self.config.get("ChromeOptions", "headless") == "true":
             self.options.add_argument("--headless")
 
-        self.driver = webdriver.Chrome(
-            executable_path=r"chromedriver.exe", options=self.options
-        )
+        if platform.system() == "Windows":
+            self.driver = webdriver.Chrome(
+                executable_path=r"chromedriver.exe", options=self.options
+            )
+        else:
+            self.driver = webdriver.Chrome(options=self.options)
 
     def load_page(self):
         logging.info("Opening page")
